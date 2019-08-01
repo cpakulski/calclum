@@ -11,6 +11,7 @@
 */
 class CalcLumFileCtx {
 public:
+  CalcLumFileCtx() {median_set_.fill(0); }
   std::atomic<int> frames_;
 
   void setAccessVars(std::shared_ptr<std::condition_variable> cv,  std::shared_ptr<std::mutex> cv_m,
@@ -21,6 +22,11 @@ public:
   const std::atomic<int>& getFramesProcessed() const {return frames_processed_; }
   void signalEnd();
   void setEOF() {eof_ = true;}
+  void reportFrameLuminance(int);
+  int getFileAverageLuminance();
+  int getMinLuminance();
+  int getMaxLuminance();
+  int getMedianLuminance();
 
 private:
   // Thge next 3 members are used to indicate that all frames from the file has been processed.
@@ -28,10 +34,20 @@ private:
   std::shared_ptr<std::mutex> cv_m_;
   std::shared_ptr<int> files_counter_;
 
-  std::mutex ctx_m_;
   std::atomic<int> frames_read_{0};
   std::atomic<int> frames_processed_{0};
   std::atomic<bool> eof_{false}; // indicates that all frames from file has been read
+
+  // mutex guards access to the per-file statistics
+  // info about frames is fetched here
+  std::mutex ctx_m_;
+  long long file_luminance_{0};
+  int min_luminance_{-1};
+  int max_luminance_{-1};
+  // the following array is used to calculate median value
+  // since each luminanace is between 0 and 255, the number of occurances of each
+  // luminance is stored in array
+  std::array<int, 256> median_set_;
 };
 
 

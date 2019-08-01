@@ -1,10 +1,79 @@
 #include "frameJob.h"
 
+/*
+  Method precesses a single frame.
+  It first computes luinance of the frame
+  then it updates the file statistics.
+*/
 void CalcLumFrameJob::processJob() {
-  // do nothihng now
+  // frame to be processed is in frame_
+  cv::Mat yuv_frame;
+  cv::cvtColor(frame_, yuv_frame, CV_BGR2YUV);
+
+  int channels = yuv_frame.channels();
+  //printf("Found %d channels\n", channels);
+  int rows = yuv_frame.rows;
+  int cols = yuv_frame.cols;
+  //printf("Found %d cols and %d rows\n", cols, rows);
+ 
+  // point to YUV data
+  uint8_t* ptrPixel = yuv_frame.data;
+  int pixel_luminance;
+  long long frame_luminance = 0;
+  cv::Scalar_<uint8_t> yuvPixel;
+  for (int i = 0; i < rows; i++) {
+    for (int j = 0; j < cols; j++) {
+      pixel_luminance = ptrPixel[i*cols*channels + j * channels + 0];
+      frame_luminance += pixel_luminance;
+#if 0
+      if(0 != pixel_luminance) {
+      printf("Found %d value.\n", pixel_luminance);
+       }
+#endif
+    }
+  }
+ frame_luminance /= (cols*rows);
+ file_ctx_->reportFrameLuminance(frame_luminance);
+ //printf("Average frame luminance is %d\n", (int)round(frame_luminance));
+ 
+#if 0
+  OK. Here is my attempt to split into color planes and calculate luminance per
+  color plane. I must be doing some mistake because it crashes.
+  // split it into color planes
   int channels = frame_.channels();
+  std::vector<cv::Mat> rgbChannels(channels);
+  cv::split(frame_, rgbChannels);
+
+  // Now process each channel
+  for (auto color : rgbChannels) {
+    // convert the channel to YUV
+    cv::Mat yuv_frame;
+    cv::cvtColor(frame_, yuv_frame, CV_BGR2YUV);
+
+    int yuv_channels = yuv_frame.channels();
+    printf("Found %d channels\n", channels);
+    int rows = yuv_frame.rows;
+    int cols = yuv_frame.cols;
+    printf("Found %d cols and %d rows\n", cols, rows);
+ 
+    // point to YUV data
+    uint8_t* ptrPixel = yuv_frame.data;
+    int pixel_luminance;
+    cv::Scalar_<uint8_t> yuvPixel;
+    for (int i = 0; i < rows; i++) {
+      for (int j = 0; j < cols; j++) {
+        pixel_luminance = ptrPixel[i*cols*channels + j * channels + 0];
+        if(0 != pixel_luminance) {
+        printf("Found %d value.\n", pixel_luminance);
+         }
+      }
+    }
+  }
+#endif
+
+  // do nothihng now
   file_ctx_->frames_++;
-  printf("Found %d channels in the frame. Frames: %d\n", channels, file_ctx_->frames_.load());
+  //printf("Found %d channels in the frame. Frames: %d\n", channels, file_ctx_->frames_.load());
   file_ctx_->incFramesProcessed();
 
   file_ctx_->signalEnd();
@@ -23,10 +92,96 @@ void CalcLumFileCtx::signalEnd() {
   if(frames_read_ != frames_processed_) {
     return; 
   }
+
+  // display average file luminance
+  std::cout << "Average file luminance: " << getFileAverageLuminance() << std::endl;
   {
     std::lock_guard<std::mutex> lk(*cv_m_);
     (*files_counter_)--;
     printf("Decremented files_counter to %d\n", *files_counter_);
   }
   cv_->notify_all();
+}
+
+void CalcLumFileCtx::reportFrameLuminance(int frame_luminance) {
+  std::unique_lock<std::mutex> lk(ctx_m_);
+  file_luminance_ += frame_luminance;
+
+  // update min luminance
+  if(-1 == min_luminance_) {
+    min_luminance_ = frame_luminance;
+  }
+  min_luminance_ = std::min(min_luminance_, frame_luminance);
+
+  // update max luminance
+  if (-1 == max_luminance_) {
+    max_luminance_ = frame_luminance;
+  }
+  max_luminance_ = std::max(max_luminance_, frame_luminance);
+
+  // update median_set. Just increase the occurance of the number
+  assert(frame_luminance <= 255);
+  median_set_[frame_luminance]++;
+}
+
+int CalcLumFileCtx::getFileAverageLuminance() {
+  // it should never be called before file processing ended.
+  assert(eof_);
+  return file_luminance_/frames_processed_;
+}
+
+int CalcLumFileCtx::getMinLuminance() {
+  // it should never be called before file processing ended.
+  assert(eof_);
+  return min_luminance_;
+}
+
+int CalcLumFileCtx::getMaxLuminance() {
+  // it should never be called before file processing ended.
+  assert(eof_);
+  return max_luminance_;
+}
+
+int CalcLumFileCtx::getMedianLuminance() {
+  // it should never be called before file processing ended.
+  assert(eof_);
+  int total_numbers = 0;
+  for (auto it : median_set_) {
+    total_numbers += it;
+  }
+  
+  int median_loc;
+  bool need_two_locs = false;
+  if(1 == total_numbers % 2) {
+    // this is even number
+    median_loc = (total_numbers - 1) /2 + 1;
+  } else {
+    median_loc = total_numbers / 2;
+    need_two_locs = true;
+  }
+
+//  printf("Total numbers %d\n", total_numbers);
+  int index = 0; 
+  while(median_loc > median_set_[index]) {
+    median_loc -= median_set_[index];
+  //  printf("Index %d, total_numbers: %d\n", index, median_loc);
+    index++;
+  }
+  if(!need_two_locs) {
+    return index;
+  }
+  // Check if the second index falls into the same bucket as index
+  if (median_loc + 1 <= median_set_[index]) {
+    return index;
+  }
+  // find the next index
+  int second_index = ++index;
+  median_loc = 1;
+  while(median_loc > median_set_[second_index]) {
+    median_loc -= median_set_[second_index];
+    //printf("Index %d, total_numbers: %d\n", index, median_loc);
+    second_index++;
+  }
+  
+ return (index + second_index) / 2; 
 }
