@@ -9,6 +9,3 @@ public:
   virtual ~CalcLumJob() {}
 };
 
-class CalcLumFrameJob : public CalcLumJob {
-  virtual void processJob() override;
-};
