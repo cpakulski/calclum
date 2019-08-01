@@ -43,6 +43,7 @@ public:
   virtual void processJob() override;
   cv::Mat& getFrame() { return frame_; }
   void setFileCtx(std::shared_ptr<CalcLumFileCtx> file_ctx) { file_ctx_ = file_ctx; }
+  virtual ~CalcLumFrameJob() override {}
 
 private:
   cv::Mat frame_;
