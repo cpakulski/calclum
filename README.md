@@ -11,5 +11,12 @@ Installation steps for OpenCV library:
 
 To install google Test:  
  sudo apt-get install googletest  
-
+  cd /usr/src/googletest/googletest  
+  sudo mkdir build  
+  cd build  
+  sudo cmake ..  
+  sudo make  
+  sudo cp libgtest* /usr/lib/  
+  cd ..  
+  sudo rm -rf build  
 
