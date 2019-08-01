@@ -1,6 +1,16 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 #include "scheduler.h"
+#include "job.h"
+
+// Create mock class based on CalcLumJob class
+// It is used to make sure that scheduler invokes processJob method
+class MockJob : public CalcLumJob {
+public:
+  MOCK_METHOD0(processJob, void());
+};
+
+
 
 TEST(Scheduler, CreatingThreads) {
   CalcLumScheduler s(7);
@@ -14,7 +24,7 @@ TEST(Scheduler, CreatingThreads) {
 TEST(Scheduler, AddJob) {
   CalcLumScheduler s(0);
   
-  s.addJob(std::make_unique<CalcLumJob>());
+  s.addJob(std::make_unique<MockJob>());
   ASSERT_THAT(s.getJobsNum(), testing::Eq(1));
 }
 
@@ -22,16 +32,21 @@ TEST(Scheduler, AddMultipleJobs) {
   CalcLumScheduler s(0);
   
   for (auto counter = 0; counter < 100; counter++) {
-    s.addJob(std::make_unique<CalcLumJob>());
+    s.addJob(std::make_unique<MockJob>());
   }
   ASSERT_THAT(s.getJobsNum(), testing::Eq(100));
 }
 
 TEST(Scheduler, ProcessOneJobOneThread) {
   CalcLumScheduler s(1);
+
   s.start();
   
-  s.addJob(std::make_unique<CalcLumJob>());
+  // create a job
+  std::unique_ptr<MockJob> job = std::make_unique<MockJob>();
+  EXPECT_CALL(*job, processJob());
+  
+  s.addJob(std::move(job));
   sleep(1); // wait a bit until thread pick the job
   ASSERT_THAT(s.getJobsNum(), testing::Eq(0));
   s.stopThreads();
@@ -42,7 +57,10 @@ TEST(Scheduler, ProcessManyJobsOneThread) {
   s.start();
   
   for (auto counter = 0; counter < 100; counter++) {
-    s.addJob(std::make_unique<CalcLumJob>());
+    std::unique_ptr<MockJob> job = std::make_unique<MockJob>();
+    EXPECT_CALL(*job, processJob());
+  
+    s.addJob(std::move(job));
   }
   sleep(1); // wait a bit until thread picks the job
   ASSERT_THAT(s.getJobsNum(), testing::Eq(0));
@@ -53,7 +71,10 @@ TEST(Scheduler, ProcessOneJobManyThreads) {
   CalcLumScheduler s(10);
   s.start();
   
-  s.addJob(std::make_unique<CalcLumJob>());
+  std::unique_ptr<MockJob> job = std::make_unique<MockJob>();
+  EXPECT_CALL(*job, processJob());
+  
+  s.addJob(std::move(job));
   sleep(1); // wait a bit until thread picks the job
   ASSERT_THAT(s.getJobsNum(), testing::Eq(0));
   s.stopThreads();
@@ -64,7 +85,10 @@ TEST(Scheduler, ProcessManyJobsManyThreads) {
   s.start();
   
   for (auto counter = 0; counter < 100; counter++) {
-    s.addJob(std::make_unique<CalcLumJob>());
+    std::unique_ptr<MockJob> job = std::make_unique<MockJob>();
+    EXPECT_CALL(*job, processJob());
+  
+    s.addJob(std::move(job));
   }
   sleep(2); // wait a bit until thread picks the job
   ASSERT_THAT(s.getJobsNum(), testing::Eq(0));

@@ -53,12 +53,18 @@ void CalcLumScheduler::processingFunc(CalcLumScheduler *s) {
     // wait for the semaphore to indicate that there is new job in the queue
     sem_wait(&s->jobs_in_queue_);
 
+    std::unique_ptr<CalcLumJob> job;
     std::unique_lock<std::mutex> lck(s->jobs_list_lock_);
     if(0 < s->jobs_list_.size()) {
-      std::unique_ptr<CalcLumJob> job = std::move(s->jobs_list_.front());
+      job = std::move(s->jobs_list_.front());
       s->jobs_list_.pop_front();
+      // unlock immediately so other threads can continue
+      lck.unlock();
+
+      // now just process the job
+      job->processJob(); 
     }
-    s->jobs_list_lock_.unlock();
+
   }
 }
 

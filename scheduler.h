@@ -4,9 +4,8 @@
 #include <list>
 #include <mutex>
 #include <atomic>
+#include "job.h"
 
-class CalcLumJob {
-};
 /*
   Main scheduler. It creates desired number of theads and suumues that each thread
   has the same functionality
