@@ -9,3 +9,7 @@ test:
 
 calclum:
 	g++ scheduler.cc calclum.cc frameJob.cc -lpthread $(DEBUG) -o calclum  `pkg-config --cflags --libs opencv`
+
+clean:
+	rm calclum
+

@@ -141,12 +141,10 @@ int CalcLumFileCtx::getMaxLuminance() {
   assert(eof_);
   return max_luminance_;
 }
-
-int CalcLumFileCtx::getMedianLuminance() {
-  // it should never be called before file processing ended.
-  assert(eof_);
+ 
+int CalcLumFileCtx::crunchMedian(std::array<int, 256>& median_set) {
   int total_numbers = 0;
-  for (auto it : median_set_) {
+  for (auto it : median_set) {
     total_numbers += it;
   }
   
@@ -162,8 +160,8 @@ int CalcLumFileCtx::getMedianLuminance() {
 
 //  printf("Total numbers %d\n", total_numbers);
   int index = 0; 
-  while(median_loc > median_set_[index]) {
-    median_loc -= median_set_[index];
+  while(median_loc > median_set[index]) {
+    median_loc -= median_set[index];
   //  printf("Index %d, total_numbers: %d\n", index, median_loc);
     index++;
   }
@@ -171,17 +169,66 @@ int CalcLumFileCtx::getMedianLuminance() {
     return index;
   }
   // Check if the second index falls into the same bucket as index
-  if (median_loc + 1 <= median_set_[index]) {
+  if (median_loc + 1 <= median_set[index]) {
     return index;
   }
   // find the next index
   int second_index = ++index;
   median_loc = 1;
-  while(median_loc > median_set_[second_index]) {
-    median_loc -= median_set_[second_index];
+  while(median_loc > median_set[second_index]) {
+    median_loc -= median_set[second_index];
     //printf("Index %d, total_numbers: %d\n", index, median_loc);
     second_index++;
   }
   
  return (index + second_index) / 2; 
+}
+
+int CalcLumFileCtx::getMedianLuminance() {
+  // it should never be called before file processing ended.
+  assert(eof_);
+  return crunchMedian(median_set_);
+}
+
+int StatsAggregator::calcMin() {
+  int min = 255;
+  // just iterate through all file contexts and find the lowest value
+  for (auto file_ctx : files_ctxs_) {
+    min = std::min(min, file_ctx->getMinLuminance());
+  }
+  return min;
+}
+
+int StatsAggregator::calcMax() {
+  int max = 0;
+  // just iterate through all file contexts and find the largest value
+  for (auto file_ctx : files_ctxs_) {
+    max = std::max(max, file_ctx->getMaxLuminance());
+  }
+  return max;
+}
+
+int StatsAggregator::calcMean() {
+  // iterate through all file contexta. From each get number of frames and luminance
+  long long total_luminance = 0;
+  long long total_frames = 0;
+  for (auto file_ctx : files_ctxs_) {
+     total_luminance += file_ctx->getFileLuminance();
+     total_frames += file_ctx->getFramesProcessed(); 
+  }
+  return total_luminance/total_frames;
+}
+
+int StatsAggregator::calcMedian() {
+  std::array<int, 256> total_set;
+  total_set.fill(0);
+
+  for (auto file_ctx : files_ctxs_) {
+    const std::array<int, 256>& file_set = file_ctx->getMedianSet();
+    for (auto index = 0; index < 256; index++) {
+      total_set[index] += file_set[index];
+    }
+  } 
+  
+  return CalcLumFileCtx::crunchMedian(total_set);
 }

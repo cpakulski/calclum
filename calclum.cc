@@ -36,7 +36,7 @@ void processFiles(int threads_num, std::list<std::string> files) {
   std::shared_ptr<int> files_to_process = std::make_shared<int>(0);
 
   // Now iterate through all files, read frame by frame and send them to the scheduler for procesing.
-  for( auto file : filesToProcess) {
+  for(auto file : filesToProcess) {
     cv::VideoCapture vc;
     cv::String fileName = std::get<0>(file);
     std::shared_ptr<CalcLumFileCtx> fileCtx = std::get<1>(file);
@@ -86,6 +86,21 @@ void processFiles(int threads_num, std::list<std::string> files) {
   printf("I am unlocked\n");
   // now wait until it is finished
   s.stopThreads();
+
+  // Now display all aggregated stats 
+  // crete Stats aggregator and add all file contetx
+  StatsAggregator aggr;
+  for(auto file : filesToProcess) {
+    std::shared_ptr<CalcLumFileCtx> file_ctx = std::get<1>(file);
+    aggr.addFileCtx(file_ctx); 
+  }
+
+  std::cout << "Aggregated statistics across all processed files:" << std::endl;
+  std::cout << "  min luminance:    " << aggr.calcMin() << std::endl;
+  std::cout << "  max luminance:    " << aggr.calcMax() << std::endl;
+  std::cout << "  mean luminance:   " << aggr.calcMean() << std::endl;
+  std::cout << "  median luminance: " << aggr.calcMedian() << std::endl;
+
 }
 
 void show_usage(std::string name) {

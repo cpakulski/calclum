@@ -4,6 +4,7 @@
 #include <atomic>
 #include <memory>
 #include <condition_variable>
+#include <vector>
 
 /* ths class represents a context releated to a file.
   There is only one such context per file and is shared between threads
@@ -19,7 +20,7 @@ public:
   void incFramesRead() { frames_read_++; }
   void incFramesProcessed() { frames_processed_++; }
   const std::atomic<int>& getFramesRead() const {return frames_read_; }
-  const std::atomic<int>& getFramesProcessed() const {return frames_processed_; }
+  int getFramesProcessed() const {return frames_processed_.load(); }
   void signalEnd();
   void setEOF() {eof_ = true;}
   void reportFrameLuminance(int);
@@ -27,6 +28,9 @@ public:
   int getMinLuminance();
   int getMaxLuminance();
   int getMedianLuminance();
+  long long getFileLuminance() const { return file_luminance_; }
+  static int crunchMedian(std::array<int, 256>& median_set);
+  const std::array<int, 256>& getMedianSet() const {return median_set_; }
 
 private:
   // Thge next 3 members are used to indicate that all frames from the file has been processed.
@@ -50,6 +54,17 @@ private:
   std::array<int, 256> median_set_;
 };
 
+class StatsAggregator {
+public:
+  void addFileCtx(std::shared_ptr<CalcLumFileCtx> fileCtx) { files_ctxs_.push_back(fileCtx); }
+  int calcMin();
+  int calcMax();
+  int calcMean();
+  int calcMedian();
+ 
+private:
+  std::vector<std::shared_ptr<CalcLumFileCtx> > files_ctxs_;
+};
 
 /* Job class which does specific calculations around the single video frame. i
 */
