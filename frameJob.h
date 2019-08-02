@@ -12,11 +12,11 @@
 */
 class CalcLumFileCtx {
 public:
-  CalcLumFileCtx() {median_set_.fill(0); }
-  std::atomic<int> frames_;
+  CalcLumFileCtx() = delete;
+  CalcLumFileCtx(const std::string& file_name) : file_name_(file_name) { median_set_.fill(0); }
 
-  void setAccessVars(std::shared_ptr<std::condition_variable> cv,  std::shared_ptr<std::mutex> cv_m,
-                     std::shared_ptr<int> files_counter) { cv_ = cv; cv_m_ = cv_m; files_counter_ = files_counter; }
+  void setSyncVars(std::shared_ptr<std::condition_variable> cv,  std::shared_ptr<std::mutex> cv_m,
+                   std::shared_ptr<int> files_counter) { cv_ = cv; cv_m_ = cv_m; files_counter_ = files_counter; }
   void incFramesRead() { frames_read_++; }
   void incFramesProcessed() { frames_processed_++; }
   const std::atomic<int>& getFramesRead() const {return frames_read_; }
@@ -31,8 +31,12 @@ public:
   long long getFileLuminance() const { return file_luminance_; }
   static int crunchMedian(std::array<int, 256>& median_set);
   const std::array<int, 256>& getMedianSet() const {return median_set_; }
+  const std::string& getFileName() const {return file_name_; }
+  void setError() { error_ = true; }
+  bool isError() { return error_; }
 
 private:
+  std::string file_name_;
   // Thge next 3 members are used to indicate that all frames from the file has been processed.
   std::shared_ptr<std::condition_variable> cv_;
   std::shared_ptr<std::mutex> cv_m_;
@@ -52,6 +56,10 @@ private:
   // since each luminanace is between 0 and 255, the number of occurances of each
   // luminance is stored in array
   std::array<int, 256> median_set_;
+
+  // set when error happned during processing. It will be omitted
+  // when calculating statistics
+  bool error_{false};
 };
 
 class StatsAggregator {
@@ -61,6 +69,7 @@ public:
   int calcMax();
   int calcMean();
   int calcMedian();
+  bool empty() const {return files_ctxs_.empty();}
  
 private:
   std::vector<std::shared_ptr<CalcLumFileCtx> > files_ctxs_;

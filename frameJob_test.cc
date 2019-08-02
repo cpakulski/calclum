@@ -4,7 +4,7 @@
 #include "frameJob.h"
 
 TEST(frameJob, averageOfOneElement) {
-  CalcLumFileCtx file_ctx;
+  CalcLumFileCtx file_ctx("test");
 
   // pretend we finished processing the file
   file_ctx.setEOF();
@@ -14,7 +14,7 @@ TEST(frameJob, averageOfOneElement) {
 }
 
 TEST(frameJob, averageOf10Elements) {
-  CalcLumFileCtx file_ctx;
+  CalcLumFileCtx file_ctx("test");
 
   // pretend we finished processing the file
   file_ctx.setEOF();
@@ -27,7 +27,7 @@ TEST(frameJob, averageOf10Elements) {
 }
 
 TEST(frameJob, minimumLuminanceOneFrame) {
-  CalcLumFileCtx file_ctx;
+  CalcLumFileCtx file_ctx("test");
   
   // pretend we finished processing the file
   file_ctx.setEOF();
@@ -36,7 +36,7 @@ TEST(frameJob, minimumLuminanceOneFrame) {
 }
 
 TEST(frameJob, minimumLuminance50Frames) {
-  CalcLumFileCtx file_ctx;
+  CalcLumFileCtx file_ctx("test");
   
   // pretend we finished processing the file
   file_ctx.setEOF();
@@ -49,7 +49,7 @@ TEST(frameJob, minimumLuminance50Frames) {
 }
 
 TEST(frameJob, maximumLuminanceOneFrame) {
-  CalcLumFileCtx file_ctx;
+  CalcLumFileCtx file_ctx("test");
   
   // pretend we finished processing the file
   file_ctx.setEOF();
@@ -58,7 +58,7 @@ TEST(frameJob, maximumLuminanceOneFrame) {
 }
 
 TEST(frameJob, maximumLuminance50Frames) {
-  CalcLumFileCtx file_ctx;
+  CalcLumFileCtx file_ctx("test");
   
   // pretend we finished processing the file
   file_ctx.setEOF();
@@ -71,7 +71,7 @@ TEST(frameJob, maximumLuminance50Frames) {
 }
 
 TEST(frameJob, medianOneFrame) {
-  CalcLumFileCtx file_ctx;
+  CalcLumFileCtx file_ctx("test");
   
   // pretend we finished processing the file
   file_ctx.setEOF();
@@ -81,7 +81,7 @@ TEST(frameJob, medianOneFrame) {
 
 // sequnce 3 3 3
 TEST(frameJob, medianOf3EqualNums) {
-  CalcLumFileCtx file_ctx;
+  CalcLumFileCtx file_ctx("test");
   
   // pretend we finished processing the file
   file_ctx.setEOF();
@@ -93,7 +93,7 @@ TEST(frameJob, medianOf3EqualNums) {
 
 // sequence 3 5 7
 TEST(frameJob, medianOf3Nums) {
-  CalcLumFileCtx file_ctx;
+  CalcLumFileCtx file_ctx("test");
   
   // pretend we finished processing the file
   file_ctx.setEOF();
@@ -104,7 +104,7 @@ TEST(frameJob, medianOf3Nums) {
 }
  // sequence 3 3 3 4 5 5 7 99 101
 TEST(frameJob, medianOf9NumsSomeRepeating) {
-  CalcLumFileCtx file_ctx;
+  CalcLumFileCtx file_ctx("test");
   
   // pretend we finished processing the file
   file_ctx.setEOF();
@@ -121,7 +121,7 @@ TEST(frameJob, medianOf9NumsSomeRepeating) {
 }
  
 TEST(frameJob, medianOfTwoEqualNumbers) {
-  CalcLumFileCtx file_ctx;
+  CalcLumFileCtx file_ctx("test");
   
   // pretend we finished processing the file
   file_ctx.setEOF();
@@ -133,7 +133,7 @@ TEST(frameJob, medianOfTwoEqualNumbers) {
 
 // sequence 4 6 should give 5
 TEST(frameJob, medianOfTwoDifferentNumbers) {
-  CalcLumFileCtx file_ctx;
+  CalcLumFileCtx file_ctx("test");
   
   // pretend we finished processing the file
   file_ctx.setEOF();
@@ -145,7 +145,7 @@ TEST(frameJob, medianOfTwoDifferentNumbers) {
 
 // sequence  3 4 6 8 should give 5
 TEST(frameJob, medianOf4DifferentNumbers) {
-  CalcLumFileCtx file_ctx;
+  CalcLumFileCtx file_ctx("test");
   
   // pretend we finished processing the file
   file_ctx.setEOF();
@@ -159,7 +159,7 @@ TEST(frameJob, medianOf4DifferentNumbers) {
 
 // sequence  4 4 4 4 6 8 should give 4
 TEST(frameJob, medianOf6NumbersSomeRepeating) {
-  CalcLumFileCtx file_ctx;
+  CalcLumFileCtx file_ctx("test");
   
   // pretend we finished processing the file
   file_ctx.setEOF();
@@ -175,7 +175,7 @@ TEST(frameJob, medianOf6NumbersSomeRepeating) {
 
 // sequence  3 4 4 6 8 8 should give 5
 TEST(frameJob, medianOf6NumbersSomeRepeating2) {
-  CalcLumFileCtx file_ctx;
+  CalcLumFileCtx file_ctx("test");
   
   // pretend we finished processing the file
   file_ctx.setEOF();
@@ -193,7 +193,7 @@ TEST(StatsAggregator, calcMinOneCtx) {
  StatsAggregator aggr;
 
   // create 3 file contexts and set minimum value
-  std::shared_ptr<CalcLumFileCtx> f = std::make_shared<CalcLumFileCtx>();
+  std::shared_ptr<CalcLumFileCtx> f = std::make_shared<CalcLumFileCtx>("test");
   f->setEOF();
   f->reportFrameLuminance(1);
   aggr.addFileCtx(f);
@@ -205,22 +205,22 @@ TEST(StatsAggregator, calcMinManyCtx) {
  StatsAggregator aggr;
 
   // create 3 file contexts and set minimum value
-  std::shared_ptr<CalcLumFileCtx> f = std::make_shared<CalcLumFileCtx>();
+  std::shared_ptr<CalcLumFileCtx> f = std::make_shared<CalcLumFileCtx>("test");
   f->setEOF();
   f->reportFrameLuminance(77);
   aggr.addFileCtx(f);
   
-  f = std::make_shared<CalcLumFileCtx>();
+  f = std::make_shared<CalcLumFileCtx>("test");
   f->setEOF();
   f->reportFrameLuminance(177);
   aggr.addFileCtx(f);
    
-  f = std::make_shared<CalcLumFileCtx>();
+  f = std::make_shared<CalcLumFileCtx>("test");
   f->setEOF();
   f->reportFrameLuminance(33);
   aggr.addFileCtx(f);
    
-  f = std::make_shared<CalcLumFileCtx>();
+  f = std::make_shared<CalcLumFileCtx>("test");
   f->setEOF();
   f->reportFrameLuminance(11);
   aggr.addFileCtx(f);
@@ -232,7 +232,7 @@ TEST(StatsAggregator, calcMaxOneCtx) {
  StatsAggregator aggr;
 
   // create 3 file contexts and set minimum value
-  std::shared_ptr<CalcLumFileCtx> f = std::make_shared<CalcLumFileCtx>();
+  std::shared_ptr<CalcLumFileCtx> f = std::make_shared<CalcLumFileCtx>("test");
   f->setEOF();
   f->reportFrameLuminance(17);
   aggr.addFileCtx(f);
@@ -244,22 +244,22 @@ TEST(StatsAggregator, calcMaxManyCtx) {
  StatsAggregator aggr;
 
   // create 3 file contexts and set minimum value
-  std::shared_ptr<CalcLumFileCtx> f = std::make_shared<CalcLumFileCtx>();
+  std::shared_ptr<CalcLumFileCtx> f = std::make_shared<CalcLumFileCtx>("test");
   f->setEOF();
   f->reportFrameLuminance(77);
   aggr.addFileCtx(f);
   
-  f = std::make_shared<CalcLumFileCtx>();
+  f = std::make_shared<CalcLumFileCtx>("test");
   f->setEOF();
   f->reportFrameLuminance(177);
   aggr.addFileCtx(f);
    
-  f = std::make_shared<CalcLumFileCtx>();
+  f = std::make_shared<CalcLumFileCtx>("test");
   f->setEOF();
   f->reportFrameLuminance(33);
   aggr.addFileCtx(f);
    
-  f = std::make_shared<CalcLumFileCtx>();
+  f = std::make_shared<CalcLumFileCtx>("test");
   f->setEOF();
   f->reportFrameLuminance(11);
   aggr.addFileCtx(f);
@@ -271,7 +271,7 @@ TEST(StatsAggregator, calcMeanOneCtx) {
  StatsAggregator aggr;
 
   // create 3 file contexts and set minimum value
-  std::shared_ptr<CalcLumFileCtx> f = std::make_shared<CalcLumFileCtx>();
+  std::shared_ptr<CalcLumFileCtx> f = std::make_shared<CalcLumFileCtx>("test");
   f->setEOF();
   f->reportFrameLuminance(180);
   f->incFramesProcessed();
@@ -285,7 +285,7 @@ TEST(StatsAggregator, calcMeanOneCtx) {
 TEST(StatsAggregator, calcMeanManyCtx) {
  StatsAggregator aggr;
 
-  std::shared_ptr<CalcLumFileCtx> f = std::make_shared<CalcLumFileCtx>();
+  std::shared_ptr<CalcLumFileCtx> f = std::make_shared<CalcLumFileCtx>("test");
   f->setEOF();
   f->reportFrameLuminance(180);
   f->incFramesProcessed();
@@ -293,7 +293,7 @@ TEST(StatsAggregator, calcMeanManyCtx) {
   f->incFramesProcessed();
   aggr.addFileCtx(f);
 
-  f = std::make_shared<CalcLumFileCtx>();
+  f = std::make_shared<CalcLumFileCtx>("test");
   f->setEOF();
   f->reportFrameLuminance(1);
   f->incFramesProcessed();
@@ -303,7 +303,7 @@ TEST(StatsAggregator, calcMeanManyCtx) {
   f->incFramesProcessed();
   aggr.addFileCtx(f);
 
-  f = std::make_shared<CalcLumFileCtx>();
+  f = std::make_shared<CalcLumFileCtx>("test");
   f->setEOF();
   f->reportFrameLuminance(10);
   f->incFramesProcessed();
@@ -321,7 +321,7 @@ TEST(StatsAggregator, calcMeanManyCtx) {
 TEST(StatsAggregator, calcMedianOneCtx) {
  StatsAggregator aggr;
 
-  std::shared_ptr<CalcLumFileCtx> f = std::make_shared<CalcLumFileCtx>();
+  std::shared_ptr<CalcLumFileCtx> f = std::make_shared<CalcLumFileCtx>("test");
   f->reportFrameLuminance(3);
   f->reportFrameLuminance(4);
   f->reportFrameLuminance(6);
@@ -335,7 +335,7 @@ TEST(StatsAggregator, calcMedianManyCtx) {
  StatsAggregator aggr;
 
   //  create sequence 3 4 6 8
-  std::shared_ptr<CalcLumFileCtx> f = std::make_shared<CalcLumFileCtx>();
+  std::shared_ptr<CalcLumFileCtx> f = std::make_shared<CalcLumFileCtx>("test");
   f->reportFrameLuminance(3);
   f->reportFrameLuminance(4);
   f->reportFrameLuminance(6);
@@ -343,7 +343,7 @@ TEST(StatsAggregator, calcMedianManyCtx) {
   aggr.addFileCtx(f);
  
   // Add sequence 4 8 9 1 
-  f = std::make_shared<CalcLumFileCtx>();
+  f = std::make_shared<CalcLumFileCtx>("test");
   f->reportFrameLuminance(4);
   f->reportFrameLuminance(8);
   f->reportFrameLuminance(9);
@@ -358,7 +358,7 @@ TEST(StatsAggregator, calcMedianManyCtx2) {
  StatsAggregator aggr;
 
   //  create sequence 3 4 6 8
-  std::shared_ptr<CalcLumFileCtx> f = std::make_shared<CalcLumFileCtx>();
+  std::shared_ptr<CalcLumFileCtx> f = std::make_shared<CalcLumFileCtx>("test");
   f->reportFrameLuminance(3);
   f->reportFrameLuminance(4);
   f->reportFrameLuminance(6);
@@ -366,7 +366,7 @@ TEST(StatsAggregator, calcMedianManyCtx2) {
   aggr.addFileCtx(f);
  
   // Add sequence 4 9 1 
-  f = std::make_shared<CalcLumFileCtx>();
+  f = std::make_shared<CalcLumFileCtx>("test");
   f->reportFrameLuminance(4);
   f->reportFrameLuminance(9);
   f->reportFrameLuminance(1);

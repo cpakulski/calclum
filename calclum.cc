@@ -11,13 +11,13 @@
 #include <dirent.h>
 #include <iostream>
 
-void processFiles(int threads_num, std::list<std::string> files) {
+int processFiles(int threads_num, std::list<std::string> files) {
   // Create a list with accotiated file contexts.
   std::list<std::tuple<cv::String, std::shared_ptr<CalcLumFileCtx> > > filesToProcess;
   //std::list<std::tuple<int, double> > filesToProcess;
   for (auto file : files) {
     std::tuple<cv::String, std::shared_ptr<CalcLumFileCtx> > t = 
-        std::make_tuple(file, std::make_shared<CalcLumFileCtx>());
+        std::make_tuple(file, std::make_shared<CalcLumFileCtx>(file));
     filesToProcess.push_back(t);
   }
 
@@ -40,16 +40,17 @@ void processFiles(int threads_num, std::list<std::string> files) {
     cv::String fileName = std::get<0>(file);
     std::shared_ptr<CalcLumFileCtx> fileCtx = std::get<1>(file);
 
-    if (vc.open(fileName)) {
-      printf("Opened %s\n", fileName.c_str());
-    } else {
-      printf("Failed\n");
+    if (!vc.open(fileName)) {
+      std::cout << fileName << "->> Invalid file" << std::endl; 
+      fileCtx->setError();
+      vc.release();
+      continue;
     }
  
-    fileCtx->setAccessVars(cv, cv_m, files_to_process);
+    fileCtx->setSyncVars(cv, cv_m, files_to_process);
     (*files_to_process)++;
 
-    std::unique_ptr<CalcLumFrameJob> jobToProcess;
+    std::unique_ptr<CalcLumFrameJob> jobToProcess = nullptr;
     while(true) {
       // create a new frame processing job
       std::unique_ptr<CalcLumFrameJob> newJob = std::make_unique<CalcLumFrameJob>();
@@ -70,7 +71,6 @@ void processFiles(int threads_num, std::list<std::string> files) {
         // send the last read frame. EOF is set so, when it is processed we get notified.
         assert(nullptr != jobToProcess);
         s.addJob(std::move(jobToProcess)); 
-        printf("Exiting\n");
         break; // exit loop
       }
     }
@@ -79,10 +79,8 @@ void processFiles(int threads_num, std::list<std::string> files) {
 
   // Now wait on the conditional variable until all files have been processed.
   std::unique_lock<std::mutex> lk(*cv_m);
-  printf("Waiting. Files are still %d\n", *files_to_process);
   cv->wait(lk, [files_to_process]{return *files_to_process == 0;});
 
-  printf("I am unlocked\n");
   // now wait until it is finished
   s.stopThreads();
 
@@ -91,7 +89,17 @@ void processFiles(int threads_num, std::list<std::string> files) {
   StatsAggregator aggr;
   for(auto file : filesToProcess) {
     std::shared_ptr<CalcLumFileCtx> file_ctx = std::get<1>(file);
-    aggr.addFileCtx(file_ctx); 
+    if(!file_ctx->isError()) {
+      aggr.addFileCtx(file_ctx); 
+    }
+  }
+
+  std::cout << std::endl;
+  std::cout << "=================================================" << std::endl;
+
+  if(aggr.empty()) {
+    std::cout << "No files were successfully processed" << std::endl;
+    return 1;
   }
 
   std::cout << "Aggregated statistics across all processed files:" << std::endl;
@@ -99,7 +107,8 @@ void processFiles(int threads_num, std::list<std::string> files) {
   std::cout << "  max luminance:    " << aggr.calcMax() << std::endl;
   std::cout << "  mean luminance:   " << aggr.calcMean() << std::endl;
   std::cout << "  median luminance: " << aggr.calcMedian() << std::endl;
-
+  
+  return 0;
 }
 
 void show_usage(std::string name) {
@@ -135,26 +144,35 @@ int main(int argc, char* argv[]) {
     show_usage(argv[0]);
     return 1;
   }
-  printf("Running with %d threads\n", threads_num);
+  std::cout << "Running with " << threads_num << " threads" << std::endl;
 
   std::list<std::string> files;
 
   // Open specified directory and find all regular files.
   // do not enter any directories.
   DIR* dirp = opendir(dir.c_str());
+  if(nullptr == dirp) {
+    std::cout << "Cannot access directory " << dir << std::endl;
+    return 1; 
+  }
+  
   struct dirent * dp;
   while ((dp = readdir(dirp)) != NULL) {
     struct stat file_stat;
     std::string fullPath = dir + std::string("/") + std::string(dp->d_name);
     stat(fullPath.c_str(), &file_stat);
     if(S_ISREG(file_stat.st_mode)) {
-      printf("Found file %s\n", dp->d_name);
+      std::cout << "Found file " << std::string(dp->d_name) << std::endl;
       files.push_back(fullPath);
     }
   }
   closedir(dirp);
+  
+  if(files.empty()) {
+    std::cout << "No files found ...." << std::endl;
+    return 1; 
+  }
 
-  processFiles(threads_num, files);
-
-  return 1;
+  std::cout << "Processing files ...." << std::endl;
+  return processFiles(threads_num, files);
 }

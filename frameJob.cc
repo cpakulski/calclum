@@ -20,16 +20,11 @@ void CalcLumFrameJob::processJob() {
   uint8_t* ptrPixel = yuv_frame.data;
   int pixel_luminance;
   long long frame_luminance = 0;
-  cv::Scalar_<uint8_t> yuvPixel;
   for (int i = 0; i < rows; i++) {
     for (int j = 0; j < cols; j++) {
+      // Y is at offset 0, U at offset 1 and V at offset 2
       pixel_luminance = ptrPixel[i*cols*channels + j * channels + 0];
       frame_luminance += pixel_luminance;
-#if 0
-      if(0 != pixel_luminance) {
-      printf("Found %d value.\n", pixel_luminance);
-       }
-#endif
     }
   }
  frame_luminance /= (cols*rows);
@@ -71,9 +66,6 @@ void CalcLumFrameJob::processJob() {
   }
 #endif
 
-  // do nothihng now
-  file_ctx_->frames_++;
-  //printf("Found %d channels in the frame. Frames: %d\n", channels, file_ctx_->frames_.load());
   file_ctx_->incFramesProcessed();
 
   file_ctx_->signalEnd();
@@ -92,13 +84,13 @@ void CalcLumFileCtx::signalEnd() {
   if(frames_read_ != frames_processed_) {
     return; 
   }
-
+  
+  // All frames from the file has been processed.
   // display average file luminance
-  std::cout << "Average file luminance: " << getFileAverageLuminance() << std::endl;
+  std::cout << file_name_ << "->> Average file luminance: " << getFileAverageLuminance() << std::endl;
   {
     std::lock_guard<std::mutex> lk(*cv_m_);
     (*files_counter_)--;
-    printf("Decremented files_counter to %d\n", *files_counter_);
   }
   cv_->notify_all();
 }
@@ -158,11 +150,9 @@ int CalcLumFileCtx::crunchMedian(std::array<int, 256>& median_set) {
     need_two_locs = true;
   }
 
-//  printf("Total numbers %d\n", total_numbers);
   int index = 0; 
   while(median_loc > median_set[index]) {
     median_loc -= median_set[index];
-  //  printf("Index %d, total_numbers: %d\n", index, median_loc);
     index++;
   }
   if(!need_two_locs) {
@@ -177,7 +167,6 @@ int CalcLumFileCtx::crunchMedian(std::array<int, 256>& median_set) {
   median_loc = 1;
   while(median_loc > median_set[second_index]) {
     median_loc -= median_set[second_index];
-    //printf("Index %d, total_numbers: %d\n", index, median_loc);
     second_index++;
   }
   
