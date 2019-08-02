@@ -1,7 +1,8 @@
 #pragma once
 
-/* Basic wrapper around the job.
-  contains data and method to call on that data.
+/* 
+  Basic abstract class representing a job handled and processed by scheduler.
+  It is abstract in order to derive mock class to run unit tests in google framework.
 */
 class CalcLumJob {
 public:

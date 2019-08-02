@@ -1,10 +1,8 @@
 #include "scheduler.h"
 
 /*
-  Main scheduler. It creates desired number of theads and suumues that each thread
-  has the same functionality
+  Main scheduler class.
 */
-int glob;
 CalcLumScheduler::CalcLumScheduler(int threads_num) : threads_num_(threads_num) {
   sem_init(&jobs_in_queue_, 0, 0);  
 
@@ -17,9 +15,9 @@ CalcLumScheduler::~CalcLumScheduler() {
   }
 }
 
+// Start required number of worker threads.
 void CalcLumScheduler::start() {
   for (auto counter = 0; counter < threads_num_; counter++) {
-    //threads_.push_back(std::make_unique<std::thread>(f, &glob));
     threads_.push_back(std::make_unique<std::thread>(processingFunc, this));
   }
 }
@@ -31,7 +29,14 @@ void CalcLumScheduler::stopThreads() {
   }
 }
 
-
+/*
+  Method is used to add a new job into the scheduler.
+  It will pend on condition variable when queue of waiting jobs
+  is too large. This is to avoid a situation when worker threads
+  cannot keep up with the main thread which creates jobs.
+  The queue could grow so large the OOM would kill the process.
+  Here we limit the queue to max_outstanding_jobs_ value.
+*/
 void CalcLumScheduler::addJob(std::unique_ptr<CalcLumJob> job) {
   std::unique_lock<std::mutex> lck(jobs_list_lock_);
   // pend on the condition variable if the queue is too large.
@@ -47,6 +52,13 @@ int CalcLumScheduler::getJobsNum() {
   return jobs_list_.size();
 }
 
+/*
+  This is worker thread. It just pends on a semaphore waiting 
+  for new job to be added to the queue. Then it takes the job from the 
+  queue and processes it.
+  If the length os the queue drops below max_outstanding_jobs_ value,
+  it will indicate that new jobs can be added to the queue. See addJob method.
+*/
 void CalcLumScheduler::processingFunc(CalcLumScheduler *s) {
   bool allow_new_jobs ;
   while(s->run_) {

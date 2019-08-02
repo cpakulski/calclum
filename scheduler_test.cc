@@ -1,3 +1,6 @@
+/*
+  Set of scheduler unit tests.
+*/
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 #include "scheduler.h"
@@ -9,8 +12,6 @@ class MockJob : public CalcLumJob {
 public:
   MOCK_METHOD0(processJob, void());
 };
-
-
 
 TEST(Scheduler, CreatingThreads) {
   CalcLumScheduler s(7);
@@ -31,7 +32,7 @@ TEST(Scheduler, AddJob) {
 TEST(Scheduler, AddMultipleJobs) {
   CalcLumScheduler s(0);
 
-  // do not exeed max outstanding jobs, bacause it will pend.
+  // do not exceed max outstanding jobs, because it will pend.
   int jobs_to_add = s.getMaxOutstandingJobs() - 1;
   for (auto counter = 0; counter < jobs_to_add; counter++) {
     s.addJob(std::make_unique<MockJob>());
@@ -49,7 +50,7 @@ TEST(Scheduler, ProcessOneJobOneThread) {
   EXPECT_CALL(*job, processJob());
   
   s.addJob(std::move(job));
-  sleep(1); // wait a bit until thread pick the job
+  sleep(1); // wait a bit until thread picks the job
   ASSERT_THAT(s.getJobsNum(), testing::Eq(0));
   s.stopThreads();
 }

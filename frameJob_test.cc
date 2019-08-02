@@ -1,3 +1,6 @@
+/*
+  Set of unit tests for frame job and statistic calculations.
+*/
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 #include "scheduler.h"
@@ -16,7 +19,6 @@ TEST(frameJob, averageOfOneElement) {
 TEST(frameJob, averageOf10Elements) {
   CalcLumFileCtx file_ctx("test");
 
-  // pretend we finished processing the file
   file_ctx.setEOF();
   for (auto i = 0; i < 10; i++) {
     file_ctx.incFramesProcessed();
@@ -29,7 +31,6 @@ TEST(frameJob, averageOf10Elements) {
 TEST(frameJob, minimumLuminanceOneFrame) {
   CalcLumFileCtx file_ctx("test");
   
-  // pretend we finished processing the file
   file_ctx.setEOF();
   file_ctx.reportFrameLuminance(3);
   ASSERT_EQ(3, file_ctx.getMinLuminance());
@@ -38,7 +39,6 @@ TEST(frameJob, minimumLuminanceOneFrame) {
 TEST(frameJob, minimumLuminance50Frames) {
   CalcLumFileCtx file_ctx("test");
   
-  // pretend we finished processing the file
   file_ctx.setEOF();
   for (auto i = 0; i < 50; i++) {
     file_ctx.reportFrameLuminance(4 + i);
@@ -51,7 +51,6 @@ TEST(frameJob, minimumLuminance50Frames) {
 TEST(frameJob, maximumLuminanceOneFrame) {
   CalcLumFileCtx file_ctx("test");
   
-  // pretend we finished processing the file
   file_ctx.setEOF();
   file_ctx.reportFrameLuminance(3);
   ASSERT_EQ(3, file_ctx.getMaxLuminance());
@@ -60,7 +59,6 @@ TEST(frameJob, maximumLuminanceOneFrame) {
 TEST(frameJob, maximumLuminance50Frames) {
   CalcLumFileCtx file_ctx("test");
   
-  // pretend we finished processing the file
   file_ctx.setEOF();
   for (auto i = 0; i < 50; i++) {
     file_ctx.reportFrameLuminance(4 + i);
@@ -73,7 +71,6 @@ TEST(frameJob, maximumLuminance50Frames) {
 TEST(frameJob, medianOneFrame) {
   CalcLumFileCtx file_ctx("test");
   
-  // pretend we finished processing the file
   file_ctx.setEOF();
   file_ctx.reportFrameLuminance(3);
   ASSERT_EQ(3, file_ctx.getMedianLuminance());
@@ -83,7 +80,6 @@ TEST(frameJob, medianOneFrame) {
 TEST(frameJob, medianOf3EqualNums) {
   CalcLumFileCtx file_ctx("test");
   
-  // pretend we finished processing the file
   file_ctx.setEOF();
   file_ctx.reportFrameLuminance(3);
   file_ctx.reportFrameLuminance(3);
@@ -95,7 +91,6 @@ TEST(frameJob, medianOf3EqualNums) {
 TEST(frameJob, medianOf3Nums) {
   CalcLumFileCtx file_ctx("test");
   
-  // pretend we finished processing the file
   file_ctx.setEOF();
   file_ctx.reportFrameLuminance(3);
   file_ctx.reportFrameLuminance(5);
@@ -106,7 +101,6 @@ TEST(frameJob, medianOf3Nums) {
 TEST(frameJob, medianOf9NumsSomeRepeating) {
   CalcLumFileCtx file_ctx("test");
   
-  // pretend we finished processing the file
   file_ctx.setEOF();
   file_ctx.reportFrameLuminance(3);
   file_ctx.reportFrameLuminance(3);
@@ -123,7 +117,6 @@ TEST(frameJob, medianOf9NumsSomeRepeating) {
 TEST(frameJob, medianOfTwoEqualNumbers) {
   CalcLumFileCtx file_ctx("test");
   
-  // pretend we finished processing the file
   file_ctx.setEOF();
   file_ctx.reportFrameLuminance(99);
   file_ctx.reportFrameLuminance(99);
@@ -135,7 +128,6 @@ TEST(frameJob, medianOfTwoEqualNumbers) {
 TEST(frameJob, medianOfTwoDifferentNumbers) {
   CalcLumFileCtx file_ctx("test");
   
-  // pretend we finished processing the file
   file_ctx.setEOF();
   file_ctx.reportFrameLuminance(4);
   file_ctx.reportFrameLuminance(6);
@@ -147,7 +139,6 @@ TEST(frameJob, medianOfTwoDifferentNumbers) {
 TEST(frameJob, medianOf4DifferentNumbers) {
   CalcLumFileCtx file_ctx("test");
   
-  // pretend we finished processing the file
   file_ctx.setEOF();
   file_ctx.reportFrameLuminance(3);
   file_ctx.reportFrameLuminance(4);
@@ -161,7 +152,6 @@ TEST(frameJob, medianOf4DifferentNumbers) {
 TEST(frameJob, medianOf6NumbersSomeRepeating) {
   CalcLumFileCtx file_ctx("test");
   
-  // pretend we finished processing the file
   file_ctx.setEOF();
   file_ctx.reportFrameLuminance(4);
   file_ctx.reportFrameLuminance(4);
@@ -177,7 +167,6 @@ TEST(frameJob, medianOf6NumbersSomeRepeating) {
 TEST(frameJob, medianOf6NumbersSomeRepeating2) {
   CalcLumFileCtx file_ctx("test");
   
-  // pretend we finished processing the file
   file_ctx.setEOF();
   file_ctx.reportFrameLuminance(3);
   file_ctx.reportFrameLuminance(4);
@@ -192,7 +181,7 @@ TEST(frameJob, medianOf6NumbersSomeRepeating2) {
 TEST(StatsAggregator, calcMinOneCtx) {
  StatsAggregator aggr;
 
-  // create 3 file contexts and set minimum value
+  // create 1 file context and set minimum value
   std::shared_ptr<CalcLumFileCtx> f = std::make_shared<CalcLumFileCtx>("test");
   f->setEOF();
   f->reportFrameLuminance(1);
@@ -231,7 +220,7 @@ TEST(StatsAggregator, calcMinManyCtx) {
 TEST(StatsAggregator, calcMaxOneCtx) {
  StatsAggregator aggr;
 
-  // create 3 file contexts and set minimum value
+  // create 1 file contexts and set maximum value
   std::shared_ptr<CalcLumFileCtx> f = std::make_shared<CalcLumFileCtx>("test");
   f->setEOF();
   f->reportFrameLuminance(17);
@@ -243,7 +232,7 @@ TEST(StatsAggregator, calcMaxOneCtx) {
 TEST(StatsAggregator, calcMaxManyCtx) {
  StatsAggregator aggr;
 
-  // create 3 file contexts and set minimum value
+  // create 3 file contexts and set maximum values
   std::shared_ptr<CalcLumFileCtx> f = std::make_shared<CalcLumFileCtx>("test");
   f->setEOF();
   f->reportFrameLuminance(77);
@@ -270,7 +259,7 @@ TEST(StatsAggregator, calcMaxManyCtx) {
 TEST(StatsAggregator, calcMeanOneCtx) {
  StatsAggregator aggr;
 
-  // create 3 file contexts and set minimum value
+  // create 1 file contexts and 2 values
   std::shared_ptr<CalcLumFileCtx> f = std::make_shared<CalcLumFileCtx>("test");
   f->setEOF();
   f->reportFrameLuminance(180);
@@ -285,6 +274,7 @@ TEST(StatsAggregator, calcMeanOneCtx) {
 TEST(StatsAggregator, calcMeanManyCtx) {
  StatsAggregator aggr;
 
+  // create 3 file contexts and fill with some values
   std::shared_ptr<CalcLumFileCtx> f = std::make_shared<CalcLumFileCtx>("test");
   f->setEOF();
   f->reportFrameLuminance(180);
@@ -350,7 +340,7 @@ TEST(StatsAggregator, calcMedianManyCtx) {
   f->reportFrameLuminance(1);
   aggr.addFileCtx(f);
 
-  // aggreagated sequnce is 1 3 4 4 6 8 8 9
+  // aggreagated sequnce is 1 3 4 4 6 8 8 9. Median is (4+6)/2
   ASSERT_EQ(5, aggr.calcMedian()); 
 }
 
@@ -372,7 +362,7 @@ TEST(StatsAggregator, calcMedianManyCtx2) {
   f->reportFrameLuminance(1);
   aggr.addFileCtx(f);
 
-  // aggreagated sequnce is 1 3 4 4 6 8 9
+  // aggreagated sequnce is 1 3 4 4 6 8 9. Median is 4.
   ASSERT_EQ(4, aggr.calcMedian()); 
 }
   

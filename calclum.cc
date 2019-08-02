@@ -1,4 +1,14 @@
-/* This file implements main thread. 
+/* 
+  This file implements main thread. 
+  Steps: 
+   - processes command line parameters 
+   - creates a list of found files
+   - creates scheduler with specified number of threads
+   - opens each file and sequentially reads video frame by video frame.
+   - frames are packaged into jobs and sent to the scheduler for processing
+   - worker threads pick the jobs and process them updating file-specific shared stats
+   - when all files has been processed, the main thread waits until worked threads finish
+   - aggregated stats for all files are calculated and displayed
 */
 #include <unistd.h>
 #include "frameJob.h"
@@ -11,17 +21,20 @@
 #include <dirent.h>
 #include <iostream>
 
+/*
+  Function takes list of files to process.
+  It opens each file and extracts frame by frame and sends them to the scheduler for procesing. 
+*/
 int processFiles(int threads_num, std::list<std::string> files) {
-  // Create a list with accotiated file contexts.
+  // Create a list with assotiated file contexts.
   std::list<std::tuple<cv::String, std::shared_ptr<CalcLumFileCtx> > > filesToProcess;
-  //std::list<std::tuple<int, double> > filesToProcess;
   for (auto file : files) {
     std::tuple<cv::String, std::shared_ptr<CalcLumFileCtx> > t = 
         std::make_tuple(file, std::make_shared<CalcLumFileCtx>(file));
     filesToProcess.push_back(t);
   }
 
-  // Now create scheduler and variables to feed frames to the scheduler
+  // Now create scheduler
   CalcLumScheduler s(threads_num);
   s.start();
 
@@ -30,11 +43,11 @@ int processFiles(int threads_num, std::list<std::string> files) {
   std::shared_ptr<std::condition_variable> cv = std::make_shared<std::condition_variable>();
   // Mutex is used to:
   // - synchronized access to file context
-  // for the coditional variable cv
+  // - for the condition variable cv
   std::shared_ptr<std::mutex> cv_m = std::make_shared<std::mutex>();    
   std::shared_ptr<int> files_to_process = std::make_shared<int>(0);
 
-  // Now iterate through all files, read frame by frame and send them to the scheduler for procesing.
+  // Now iterate through all files, read frame by frame and send them to the scheduler for processing.
   for(auto file : filesToProcess) {
     cv::VideoCapture vc;
     cv::String fileName = std::get<0>(file);
@@ -50,42 +63,41 @@ int processFiles(int threads_num, std::list<std::string> files) {
     fileCtx->setSyncVars(cv, cv_m, files_to_process);
     (*files_to_process)++;
 
-    std::unique_ptr<CalcLumFrameJob> jobToProcess = nullptr;
+    std::unique_ptr<CalcLumFrameJob> jobToProcess;
     while(true) {
       // create a new frame processing job
       std::unique_ptr<CalcLumFrameJob> newJob = std::make_unique<CalcLumFrameJob>();
       // read new frame to the job class
       if(vc.read(newJob->getFrame())) {
-        // we got the next frame. Setup job's fields.
         fileCtx->incFramesRead();
+        // we got the next frame. Setup job's fields.
         newJob->setFileCtx(fileCtx);
-        //s.addJob(std::move(newJob)); 
         if(nullptr != jobToProcess) {
 	  s.addJob(std::move(jobToProcess));
         }
         jobToProcess = std::move(newJob);
       }
       else {
-        // mark tht entire file has been read
+        // mark that entire file has been read
         fileCtx->setEOF();
-        // send the last read frame. EOF is set so, when it is processed we get notified.
+        // send the last read frame. EOF is set now, so we get notified when the last frame has been processed.
         assert(nullptr != jobToProcess);
         s.addJob(std::move(jobToProcess)); 
-        break; // exit loop
+        break; // exit loop and go to the next file
       }
     }
     vc.release();
   }
 
+  // All frames from all files have been sent to the scheduler.
   // Now wait on the conditional variable until all files have been processed.
   std::unique_lock<std::mutex> lk(*cv_m);
   cv->wait(lk, [files_to_process]{return *files_to_process == 0;});
 
-  // now wait until it is finished
   s.stopThreads();
 
   // Now display all aggregated stats 
-  // crete Stats aggregator and add all file contetx
+  // Create stats aggregator and add file contexts for all successfully processed files.
   StatsAggregator aggr;
   for(auto file : filesToProcess) {
     std::shared_ptr<CalcLumFileCtx> file_ctx = std::get<1>(file);
@@ -117,6 +129,7 @@ void show_usage(std::string name) {
 }
 
 int main(int argc, char* argv[]) {
+  // Command line params processing. In C++ it is always a pain.
   if (argc < 5) {
     show_usage(argv[0]);
     return 1;
@@ -137,6 +150,7 @@ int main(int argc, char* argv[]) {
       }
     }
     if(arg == "-d") {
+      // next must be directory name
       dir = argv[++i];
     }
   }
@@ -149,7 +163,7 @@ int main(int argc, char* argv[]) {
   std::list<std::string> files;
 
   // Open specified directory and find all regular files.
-  // do not enter any directories.
+  // Do not enter any sub-directories.
   DIR* dirp = opendir(dir.c_str());
   if(nullptr == dirp) {
     std::cout << "Cannot access directory " << dir << std::endl;

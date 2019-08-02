@@ -1,12 +1,13 @@
 #include "frameJob.h"
 
 /*
-  Method precesses a single frame.
-  It first computes luinance of the frame
-  then it updates the file statistics.
+  Method processes a single frame. This is executed on worker thread.
+  Method traverses all pixels in the frame and obtains luminance of each pixel.
+  Frame luminance is average of all pixels.
 */
 void CalcLumFrameJob::processJob() {
   // frame to be processed is in frame_
+  // convert to YUV to get value Y.
   cv::Mat yuv_frame;
   cv::cvtColor(frame_, yuv_frame, CV_BGR2YUV);
 
@@ -43,7 +44,7 @@ void CalcLumFrameJob::processJob() {
   for (auto color : rgbChannels) {
     // convert the channel to YUV
     cv::Mat yuv_frame;
-    cv::cvtColor(frame_, yuv_frame, CV_BGR2YUV);
+    cv::cvtColor(frame_, yuv_frame, CV_BGR2YUV); <<- crashes here
 
     int yuv_channels = yuv_frame.channels();
     printf("Found %d channels\n", channels);
@@ -72,11 +73,13 @@ void CalcLumFrameJob::processJob() {
 }
 
 
-/* This method treis to detect that all frames from a file has been processed.
-  It happens only when the reader indicated eof condition and job processor
-  has the number of processed frames equal to the number of frames read from the file.
+/* 
+  This method tries to detect if all frames from a file has been processed.
+  It happens only when the reader indicated eof condition and 
+  the number of processed frames is equal to the number of frames read from the file.
 */
 void CalcLumFileCtx::signalEnd() {
+  // Not at the end of the file! Bail out and continue processing.
   if(!eof_) {
     return;
   }
@@ -86,8 +89,10 @@ void CalcLumFileCtx::signalEnd() {
   }
   
   // All frames from the file has been processed.
-  // display average file luminance
+  // Display average file luminance for the file.
   std::cout << file_name_ << "->> Average file luminance: " << getFileAverageLuminance() << std::endl;
+
+  // signal that one more file has been processed.
   {
     std::lock_guard<std::mutex> lk(*cv_m_);
     (*files_counter_)--;
@@ -95,6 +100,10 @@ void CalcLumFileCtx::signalEnd() {
   cv_->notify_all();
 }
 
+/* 
+  Method is called when luminance for a single frame has been calculated.
+  It updates various fields, so later on min. max, median and mean can be calculated.
+*/
 void CalcLumFileCtx::reportFrameLuminance(int frame_luminance) {
   std::unique_lock<std::mutex> lk(ctx_m_);
   file_luminance_ += frame_luminance;
@@ -143,9 +152,10 @@ int CalcLumFileCtx::crunchMedian(std::array<int, 256>& median_set) {
   int median_loc;
   bool need_two_locs = false;
   if(1 == total_numbers % 2) {
-    // this is even number
+    // this is odd number in the set
     median_loc = (total_numbers - 1) /2 + 1;
   } else {
+    // this is even number in the set
     median_loc = total_numbers / 2;
     need_two_locs = true;
   }

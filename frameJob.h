@@ -6,9 +6,10 @@
 #include <condition_variable>
 #include <vector>
 
-/* ths class represents a context releated to a file.
-  There is only one such context per file and is shared between threads
-  processing frames from theat file.
+/*
+  CalcLumFileCtx class represents a context releated to a single file.
+  There is only one such context per file and it is shared between threads
+  processing frames from that file.
 */
 class CalcLumFileCtx {
 public:
@@ -37,31 +38,34 @@ public:
 
 private:
   std::string file_name_;
-  // Thge next 3 members are used to indicate that all frames from the file has been processed.
+  // The next 3 members are used to indicate that all frames from the file has been processed.
+  // They are set by setSyncVars method.
   std::shared_ptr<std::condition_variable> cv_;
   std::shared_ptr<std::mutex> cv_m_;
   std::shared_ptr<int> files_counter_;
 
   std::atomic<int> frames_read_{0};
   std::atomic<int> frames_processed_{0};
-  std::atomic<bool> eof_{false}; // indicates that all frames from file has been read
+  std::atomic<bool> eof_{false}; // when true it indicates that all frames from file has been read
 
   // mutex guards access to the per-file statistics
-  // info about frames is fetched here
   std::mutex ctx_m_;
   long long file_luminance_{0};
   int min_luminance_{-1};
   int max_luminance_{-1};
   // the following array is used to calculate median value
-  // since each luminanace is between 0 and 255, the number of occurances of each
-  // luminance is stored in array
+  // since each luminance is between 0 and 255, the number of occurances of each
+  // luminance is stored in array of such size.
   std::array<int, 256> median_set_;
 
-  // set when error happned during processing. It will be omitted
+  // set when error happened during processing. It will be omitted
   // when calculating statistics
   bool error_{false};
 };
 
+/*
+  StatsAggregator class is used to calculate stats across all successfully processed files.
+*/
 class StatsAggregator {
 public:
   void addFileCtx(std::shared_ptr<CalcLumFileCtx> fileCtx) { files_ctxs_.push_back(fileCtx); }
@@ -75,7 +79,10 @@ private:
   std::vector<std::shared_ptr<CalcLumFileCtx> > files_ctxs_;
 };
 
-/* Job class which does specific calculations around the single video frame. i
+/* 
+  Job class does specific calculations around the single video frame.
+  It is created by main thread, filled with frame data and sent to worker threads
+  which execute processJob virtual method. 
 */
 class CalcLumFrameJob : public CalcLumJob {
 public:
