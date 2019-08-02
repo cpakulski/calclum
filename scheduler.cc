@@ -1,8 +1,5 @@
 #include "scheduler.h"
 
-void f(int *p) {
-  *p = 99;
-}
 /*
   Main scheduler. It creates desired number of theads and suumues that each thread
   has the same functionality
@@ -37,6 +34,8 @@ void CalcLumScheduler::stopThreads() {
 
 void CalcLumScheduler::addJob(std::unique_ptr<CalcLumJob> job) {
   std::unique_lock<std::mutex> lck(jobs_list_lock_);
+  // pend on the condition variable if the queue is too large.
+  cv_.wait(lck, [this]{return jobs_list_.size() < max_outstanding_jobs_;});
   jobs_list_.push_back(std::move(job));
  
   // signal that there is new job added to the queue
@@ -49,22 +48,27 @@ int CalcLumScheduler::getJobsNum() {
 }
 
 void CalcLumScheduler::processingFunc(CalcLumScheduler *s) {
+  bool allow_new_jobs ;
   while(s->run_) {
     // wait for the semaphore to indicate that there is new job in the queue
     sem_wait(&s->jobs_in_queue_);
 
     std::unique_ptr<CalcLumJob> job;
     std::unique_lock<std::mutex> lck(s->jobs_list_lock_);
+    allow_new_jobs = (s->jobs_list_.size() < s->max_outstanding_jobs_);
     if(0 < s->jobs_list_.size()) {
       job = std::move(s->jobs_list_.front());
       s->jobs_list_.pop_front();
       // unlock immediately so other threads can continue
       lck.unlock();
+      if(allow_new_jobs) {
+        s->cv_.notify_all();
+      }
 
       // now just process the job
       job->processJob(); 
     }
-
+    
   }
 }
 

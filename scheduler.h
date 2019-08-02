@@ -3,6 +3,7 @@
 #include <semaphore.h>
 #include <list>
 #include <mutex>
+#include <condition_variable>
 #include <atomic>
 #include "job.h"
 
@@ -22,6 +23,8 @@ public:
   void addJob(std::unique_ptr<CalcLumJob>);
   int getJobsNum();
   void stopThreads();
+ 
+  int getMaxOutstandingJobs() const { return max_outstanding_jobs_; }
 
 private:
   int threads_num_;
@@ -35,6 +38,14 @@ private:
 
   // mutex guarding access to the jobs_list_
   std::mutex jobs_list_lock_;
+  // condition variable is used as throttle mechanism.
+  // rIif the writer is too fast and worker threads are comparatively
+  // slow, there would be large number of scheduled jobs waiting in the queue
+  // possibly exhausting memory. Therefor only max_outstanding_jobs_ are allowed in
+  // the queue.
+  std::condition_variable cv_;
+
+  int max_outstanding_jobs_{50};
 
   // boolean value to indicate that threads should exit
   std::atomic<bool> run_{true};

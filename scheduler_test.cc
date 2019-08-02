@@ -30,11 +30,13 @@ TEST(Scheduler, AddJob) {
 
 TEST(Scheduler, AddMultipleJobs) {
   CalcLumScheduler s(0);
-  
-  for (auto counter = 0; counter < 100; counter++) {
+
+  // do not exeed max outstanding jobs, bacause it will pend.
+  int jobs_to_add = s.getMaxOutstandingJobs() - 1;
+  for (auto counter = 0; counter < jobs_to_add; counter++) {
     s.addJob(std::make_unique<MockJob>());
   }
-  ASSERT_THAT(s.getJobsNum(), testing::Eq(100));
+  ASSERT_THAT(s.getJobsNum(), testing::Eq(jobs_to_add));
 }
 
 TEST(Scheduler, ProcessOneJobOneThread) {
